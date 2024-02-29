@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Socket.IO Test</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- <script src="https://cdn.tailwindcss.com"></script> -->
+    <style>
+        table,
+        th,
+        td {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 0.25em 1rem;
+        }
+
+        td {
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        body>div {
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Socket Clients Generating Tool</h2>
+    <table style="margin-bottom: 0.5rem;">
+        <tr>
+            <th>Total Clients</th>
+            <th>Connected</th>
+            <th>Disconnected</th>
+        </tr>
+        <tr>
+            <td id="total-clients">0</td>
+            <td id="connected-clients">0</td>
+            <td id="disconnected-clients">0</td>
+        </tr>
+    </table>
+    <div>
+        <input type="number" min="1" step="1" id="client-count" />
+        <button type="button" id="add-clients">Add Clients</button>
+    </div>
+    <div>
+        <input type="number" min="1" step="1" id="disconnect-count" />
+        <button type="button" id="disconnect-clients">Disconnect Clients</button>
+        <button type="button" id="disconnect-all-clients">Disconnect All</button>
+    </div>
+    <a href="/admin" target="_blank">Admin UI</a>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+        integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+        crossorigin="anonymous"></script>
+    <script>
+        class Test {
+
+            sockets = [];
+            connectedClients = 0;
+            disconnectedClients = 0;
+
+            addClients(count) {
+                for (let i = 0; i < count; i++) {
+                    try {
+                        const socket = io("/", { forceNew: true });
+                        socket.onAny((event, ...args) => {
+                            console.log(socket.id, event, args);
+                        });
+                        this.sockets.push(socket);
+                    }
+                    catch (err) {
+                        console.log(err);
+                    }
+                }
+                this.updateStats();
+                this.showStats();
+            }
+
+            disconnectClients(count = this.sockets.length) {
+                if (this.sockets.length <= 0) return;
+                if (count > this.sockets.length) count = this.sockets.length;
+                for (let i = 0; i < count; i++) {
+                    try {
+                        this.sockets[i].disconnect();
+                    }
+                    catch (err) {
+                        console.log('remove clients error: ', err);
+                    }
+                }
+                this.sockets.splice(0, count);
+                this.updateStats();
+                this.showStats();
+            }
+
+            updateStats() {
+                this.connectedClients = this.sockets.filter(socket => socket.connected).length;
+                this.disconnectedClients = this.sockets.length - this.connectedClients;
+            }
+
+            showStats() {
+                $('#total-clients').html(this.sockets.length);
+                $('#connected-clients').html(this.connectedClients);
+                $('#disconnected-clients').html(this.disconnectedClients);
+            }
+
+        }
+        const test = new Test();
+        $('#add-clients').click(() => {
+            test.addClients($('#client-count').val());
+        });
+        $('#disconnect-clients').click(() => {
+            test.disconnectClients(+$('#disconnect-count').val());
+        });
+        $('#disconnect-all').click(() => {
+            test.disconnectClients();
+        });
+        setInterval(() => {
+            test.updateStats();
+            test.showStats();
+        }, 3000);
+    </script>
+</body>
+
+</html>
